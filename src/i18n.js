@@ -3,6 +3,8 @@ const i18n = {
   translations: {},
 
   async init() {
+    // Default to English if no preference saved
+    this.locale = localStorage.getItem('locale') || 'en-US';
     await this.loadTranslations(this.locale);
     this.applyTranslations();
     document.body.classList.remove('loading');
@@ -13,6 +15,10 @@ const i18n = {
     this.translations = await res.json();
     this.locale = locale;
     localStorage.setItem('locale', locale);
+
+    // Set text direction based on locale
+    document.documentElement.dir = locale === 'ar-SA' ? 'rtl' : 'ltr';
+    document.documentElement.lang = locale;
   },
 
   t(key) {
@@ -24,7 +30,6 @@ const i18n = {
   },
 
   applyTranslations() {
-    document.documentElement.lang = this.locale;
     document.title = this.t('title');
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');

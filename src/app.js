@@ -33,6 +33,7 @@ async function init() {
     try {
         await i18n.init();
         setupLanguageSwitch();
+        setupTheme();
         showLoading(i18n.t('status.loading'));
 
         engine = await WatermarkEngine.create();
@@ -56,13 +57,52 @@ async function init() {
  */
 function setupLanguageSwitch() {
     const btn = document.getElementById('langSwitch');
-    btn.textContent = i18n.locale === 'zh-CN' ? 'EN' : '中文';
+    btn.textContent = i18n.locale === 'ar-SA' ? 'AR' : 'EN';
     btn.addEventListener('click', async () => {
-        const newLocale = i18n.locale === 'zh-CN' ? 'en-US' : 'zh-CN';
+        const newLocale = i18n.locale === 'ar-SA' ? 'en-US' : 'ar-SA';
         await i18n.switchLocale(newLocale);
-        btn.textContent = newLocale === 'zh-CN' ? 'EN' : '中文';
+        btn.textContent = newLocale === 'ar-SA' ? 'AR' : 'EN';
         updateDynamicTexts();
     });
+}
+
+/**
+ * setup theme handling
+ */
+function setupTheme() {
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const html = document.documentElement;
+
+    // Check local storage or system preference
+    const savedTheme = localStorage.getItem('theme');
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+        html.classList.add('dark');
+        updateThemeIcon(true);
+    } else {
+        html.classList.remove('dark');
+        updateThemeIcon(false);
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+        html.classList.toggle('dark');
+        const isDark = html.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        updateThemeIcon(isDark);
+    });
+}
+
+function updateThemeIcon(isDark) {
+    const icon = document.getElementById('themeIcon');
+    if (!icon) return;
+
+    // Sun icon for light mode, Moon icon for dark mode
+    if (isDark) {
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />`;
+    } else {
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
+    }
 }
 
 /**
@@ -150,9 +190,7 @@ async function processSingle(item) {
         const img = await loadImage(item.file);
         item.originalImg = img;
 
-        const { is_google, is_original } = await checkOriginal(item.file);
-        const status = getOriginalStatus({ is_google, is_original });
-        setStatusMessage(status, is_google && is_original ? 'success' : 'warn');
+        // Validation check removed as per user request
 
         originalImage.src = img.src;
 
@@ -190,20 +228,20 @@ async function processSingle(item) {
 function createImageCard(item) {
     const card = document.createElement('div');
     card.id = `card-${item.id}`;
-    card.className = 'bg-white md:h-[140px] rounded-xl shadow-card border border-gray-100 overflow-hidden';
+    card.className = 'simple-card md:h-[140px] overflow-hidden transition-all duration-200';
     card.innerHTML = `
         <div class="flex flex-wrap h-full">
-            <div class="w-full md:w-auto h-full flex border-b border-gray-100">
-                <div class="w-24 md:w-48 flex-shrink-0 bg-gray-50 p-2 flex items-center justify-center">
-                    <img id="result-${item.id}" class="max-w-full max-h-24 md:max-h-full rounded" data-zoomable />
+            <div class="w-full md:w-auto h-full flex border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700">
+                <div class="w-24 md:w-48 flex-shrink-0 bg-gray-50 dark:bg-black/20 p-2 flex items-center justify-center">
+                    <img id="result-${item.id}" class="max-w-full max-h-24 md:max-h-full rounded shadow-sm" data-zoomable />
                 </div>
-                <div class="flex-1 p-4 flex flex-col min-w-0">
-                    <h4 class="font-semibold text-sm text-gray-900 mb-2 truncate">${item.name}</h4>
-                    <div class="text-xs text-gray-500" id="status-${item.id}">${i18n.t('status.pending')}</div>
+                <div class="flex-1 p-4 flex flex-col min-w-0 justify-center">
+                    <h4 class="font-semibold text-sm text-gray-900 dark:text-white mb-2 truncate" title="${item.name}">${item.name}</h4>
+                    <div class="text-xs text-gray-500 dark:text-gray-400" id="status-${item.id}">${i18n.t('status.pending')}</div>
                 </div>
             </div>
-            <div class="w-full md:w-auto ml-auto flex-shrink-0 p-2 md:p-4 flex items-center justify-center">
-                <button id="download-${item.id}" class="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-xs md:text-sm hidden">${i18n.t('btn.download')}</button>
+            <div class="w-full md:w-auto ml-auto flex-shrink-0 p-2 md:p-4 flex items-center justify-center bg-transparent">
+                <button id="download-${item.id}" class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-xs md:text-sm hidden shadow-sm transition-colors font-medium">${i18n.t('btn.download')}</button>
             </div>
         </div>
     `;
@@ -249,13 +287,7 @@ async function processQueue() {
                 processedCount++;
                 updateProgress();
 
-                checkOriginal(item.originalImg).then(({ is_google, is_original }) => {
-                    if (!is_google || !is_original) {
-                        const status = getOriginalStatus({ is_google, is_original });
-                        const statusEl = document.getElementById(`status-${item.id}`);
-                        if (statusEl) statusEl.innerHTML += `<p class="inline-block mt-1 text-xs md:text-sm text-warn">${status}</p>`;
-                    }
-                }).catch(() => {});
+                // Validation check removed as per user request
             } catch (error) {
                 item.status = 'error';
                 updateStatus(item.id, i18n.t('status.failed'));

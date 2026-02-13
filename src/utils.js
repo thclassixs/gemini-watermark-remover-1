@@ -37,9 +37,16 @@ const statusMessage = document.getElementById('statusMessage');
 export function setStatusMessage(message = '', type = '') {
     statusMessage.textContent = message;
     statusMessage.style.display = message ? 'block' : 'none';
-    const colorMap = { warn: 'text-warn', success: 'text-success' };
-    statusMessage.classList.remove(...Object.values(colorMap));
-    if (colorMap[type]) statusMessage.classList.add(colorMap[type]);
+    const colorMap = {
+        warn: 'text-yellow-500 dark:text-yellow-400',
+        success: 'text-emerald-500 dark:text-emerald-400'
+    };
+    // Clean all potential color classes first
+    statusMessage.className = 'mt-6 text-sm min-h-[1.25rem] transition-colors';
+    if (colorMap[type]) {
+        // Add the color classes (handling multiple classes in the string)
+        colorMap[type].split(' ').forEach(cls => statusMessage.classList.add(cls));
+    }
 }
 
 const loadingOverlay = document.getElementById('loadingOverlay');
